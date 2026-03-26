@@ -3,17 +3,9 @@
   "configurations": [
     {
         "type": "java",
-        "name": "QrGeneratorApp",
-        "request": "launch",
-        "mainClass": "main.java.de.mf.qr.QrGeneratorApp",
-        "projectName": ""
-    },
-    {
-        "type": "java",
         "name": "Run QrGeneratorApp",
         "request": "launch",
-        "mainClass": "de.mf.qr.QrGeneratorApp",
-        "projectName": "qr-code-generator"
+      "mainClass": "de.mf.qr.QrGeneratorApp"
     }
 ]
 }
