@@ -1,11 +1,16 @@
 {
   "version": "0.2.0",
   "configurations": [
+    
+
+
+
     {
         "type": "java",
         "name": "Run QrGeneratorApp",
         "request": "launch",
-      "mainClass": "de.mf.qr.QrGeneratorApp"
+      "mainClass": "de.mf.qr.QrGeneratorApp",
+      "vmArgs": "--module-path \"${env:USERPROFILE}\\.m2\\repository\\org\\openjfx\\javafx-base\\21.0.2\\javafx-base-21.0.2-win.jar;${env:USERPROFILE}\\.m2\\repository\\org\\openjfx\\javafx-graphics\\21.0.2\\javafx-graphics-21.0.2-win.jar;${env:USERPROFILE}\\.m2\\repository\\org\\openjfx\\javafx-controls\\21.0.2\\javafx-controls-21.0.2-win.jar\" --add-modules javafx.controls,javafx.graphics,javafx.base"
     }
 ]
 }
