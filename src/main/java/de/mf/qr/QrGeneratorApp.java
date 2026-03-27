@@ -29,10 +29,13 @@ import java.awt.RenderingHints;
 import java.awt.Shape;
 import java.awt.geom.RoundRectangle2D;
 import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.net.URI;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -73,6 +76,7 @@ public class QrGeneratorApp extends Application {
 
     private final ColorPicker cpQr = new ColorPicker(Color.web("#1E6BFF"));
     private final ColorPicker cpBg = new ColorPicker(Color.web("#F8FAFC"));
+    private final CheckBox cbTransparentBg = new CheckBox("Transparent");
 
     private final CheckBox cbLogo = new CheckBox("Logo in der Mitte");
     private final Label lblLogoPath = new Label("Kein Logo ausgewählt");
@@ -117,6 +121,8 @@ public class QrGeneratorApp extends Application {
         pfWifi.setPromptText("WLAN-Passwort");
         cbAuth.getItems().addAll("WPA", "WEP", "nopass");
         cbAuth.setValue("WPA");
+        cbTransparentBg.setSelected(false);
+        cpBg.disableProperty().bind(cbTransparentBg.selectedProperty());
 
         rbAddress.setToggleGroup(tgLocationMode);
         rbCoordinates.setToggleGroup(tgLocationMode);
@@ -166,7 +172,9 @@ public class QrGeneratorApp extends Application {
         form.add(cpQr, 1, r++);
 
         form.add(new Label("Hintergrund:"), 0, r);
-        form.add(cpBg, 1, r++);
+        HBox bgRow = new HBox(10, cpBg, cbTransparentBg);
+        bgRow.setAlignment(Pos.CENTER_LEFT);
+        form.add(bgRow, 1, r++);
 
         HBox logoRow = new HBox(10, cbLogo, btnPickLogo, lblLogoPath);
         logoRow.setAlignment(Pos.CENTER_LEFT);
@@ -289,6 +297,7 @@ public class QrGeneratorApp extends Application {
         cbAuth.valueProperty().addListener((obs, oldV, newV) -> scheduleLivePreview());
         cpQr.valueProperty().addListener((obs, oldV, newV) -> scheduleLivePreview());
         cpBg.valueProperty().addListener((obs, oldV, newV) -> scheduleLivePreview());
+        cbTransparentBg.selectedProperty().addListener((obs, oldV, newV) -> scheduleLivePreview());
         cbLogo.selectedProperty().addListener((obs, oldV, newV) -> scheduleLivePreview());
     }
 
@@ -427,7 +436,7 @@ public class QrGeneratorApp extends Application {
                     content,
                     900,
                     fxToAwt(cpQr.getValue()),
-                    fxToAwt(cpBg.getValue()),
+                    effectiveBgColor(),
                     (cbLogo.isSelected() && selectedLogo != null) ? selectedLogo.getAbsolutePath() : null
             );
             preview.setImage(toFxImage(img));
@@ -441,24 +450,173 @@ public class QrGeneratorApp extends Application {
             String content = buildContent();
             FileChooser fc = new FileChooser();
             fc.setTitle("QR-Code speichern");
-            fc.getExtensionFilters().add(new FileChooser.ExtensionFilter("PNG Datei", "*.png"));
+            fc.getExtensionFilters().addAll(
+                    new FileChooser.ExtensionFilter("PNG Datei", "*.png"),
+                    new FileChooser.ExtensionFilter("SVG Datei", "*.svg")
+            );
             fc.setInitialFileName("qr_code.png");
             File out = fc.showSaveDialog(stage);
             if (out == null) return;
 
-            BufferedImage img = generateQrBuffered(
-                    content,
-                    1000,
-                    fxToAwt(cpQr.getValue()),
-                    fxToAwt(cpBg.getValue()),
-                    (cbLogo.isSelected() && selectedLogo != null) ? selectedLogo.getAbsolutePath() : null
-            );
+            boolean saveAsSvg = shouldSaveAsSvg(fc, out);
+            out = ensureFileExtension(out, saveAsSvg ? ".svg" : ".png");
 
-            ImageIO.write(img, "png", out);
+            if (saveAsSvg) {
+                String svg = generateQrSvg(
+                        content,
+                        360,
+                        cpQr.getValue(),
+                        cbTransparentBg.isSelected() ? null : cpBg.getValue(),
+                        (cbLogo.isSelected() && selectedLogo != null) ? selectedLogo.getAbsolutePath() : null
+                );
+                Files.writeString(out.toPath(), svg, StandardCharsets.UTF_8);
+            } else {
+                BufferedImage img = generateQrBuffered(
+                        content,
+                        1000,
+                        fxToAwt(cpQr.getValue()),
+                        effectiveBgColor(),
+                        (cbLogo.isSelected() && selectedLogo != null) ? selectedLogo.getAbsolutePath() : null
+                );
+
+                ImageIO.write(img, "png", out);
+            }
+
             showInfo("Fertig", "QR-Code gespeichert:\n" + out.getAbsolutePath());
         } catch (Exception ex) {
             showError("Fehler beim Speichern", ex.getMessage());
         }
+    }
+
+    private java.awt.Color effectiveBgColor() {
+        return cbTransparentBg.isSelected()
+                ? new java.awt.Color(0, 0, 0, 0)
+                : fxToAwt(cpBg.getValue());
+    }
+
+    private static boolean shouldSaveAsSvg(FileChooser fc, File out) {
+        String n = out.getName().toLowerCase();
+        if (n.endsWith(".svg")) return true;
+        if (n.endsWith(".png")) return false;
+
+        FileChooser.ExtensionFilter selected = fc.getSelectedExtensionFilter();
+        if (selected == null) return false;
+        return selected.getExtensions().stream().anyMatch(e -> "*.svg".equalsIgnoreCase(e));
+    }
+
+    private static File ensureFileExtension(File out, String ext) {
+        String n = out.getName().toLowerCase();
+        if (n.endsWith(ext)) return out;
+        return new File(out.getParentFile(), out.getName() + ext);
+    }
+
+    private static String generateQrSvg(String content, int size, Color qrColor, Color bgColor, String logoPath) throws Exception {
+        Map<EncodeHintType, Object> hints = new HashMap<>();
+        hints.put(EncodeHintType.CHARACTER_SET, StandardCharsets.UTF_8.name());
+        hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
+        hints.put(EncodeHintType.MARGIN, 1);
+
+        BitMatrix matrix = new MultiFormatWriter().encode(content, BarcodeFormat.QR_CODE, size, size, hints);
+        int w = matrix.getWidth();
+        int h = matrix.getHeight();
+
+        StringBuilder sb = new StringBuilder(1024 * 128);
+        sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
+        sb.append("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 ")
+                .append(w)
+                .append(' ')
+                .append(h)
+                .append("\" shape-rendering=\"crispEdges\">\n");
+
+        if (bgColor != null) {
+            sb.append("  <rect width=\"100%\" height=\"100%\" fill=\"")
+                    .append(toHex(bgColor))
+                    .append("\"");
+            if (bgColor.getOpacity() < 1.0) {
+                sb.append(" fill-opacity=\"").append(trimDouble(bgColor.getOpacity())).append("\"");
+            }
+            sb.append("/>\n");
+        }
+
+        sb.append("  <g fill=\"").append(toHex(qrColor)).append("\"");
+        if (qrColor.getOpacity() < 1.0) {
+            sb.append(" fill-opacity=\"").append(trimDouble(qrColor.getOpacity())).append("\"");
+        }
+        sb.append(">\n");
+
+        for (int y = 0; y < h; y++) {
+            for (int x = 0; x < w; x++) {
+                if (matrix.get(x, y)) {
+                    sb.append("    <rect x=\"")
+                            .append(x)
+                            .append("\" y=\"")
+                            .append(y)
+                            .append("\" width=\"1\" height=\"1\"/>\n");
+                }
+            }
+        }
+
+        if (logoPath != null && !logoPath.isBlank()) {
+            File logoFile = new File(logoPath);
+            if (logoFile.exists()) {
+                String dataUri = toPngDataUri(logoFile);
+                int logoSize = size / 5;
+                int lx = (w - logoSize) / 2;
+                int ly = (h - logoSize) / 2;
+                int padding = 4;
+
+                sb.append("    <rect x=\"")
+                        .append(lx - padding)
+                        .append("\" y=\"")
+                        .append(ly - padding)
+                        .append("\" width=\"")
+                        .append(logoSize + padding * 2)
+                        .append("\" height=\"")
+                        .append(logoSize + padding * 2)
+                        .append("\" rx=\"8\" ry=\"8\" fill=\"#FFFFFF\"/>")
+                        .append("\n");
+
+                sb.append("    <image x=\"")
+                        .append(lx)
+                        .append("\" y=\"")
+                        .append(ly)
+                        .append("\" width=\"")
+                        .append(logoSize)
+                        .append("\" height=\"")
+                        .append(logoSize)
+                        .append("\" preserveAspectRatio=\"xMidYMid meet\" href=\"")
+                        .append(dataUri)
+                        .append("\"/>")
+                        .append("\n");
+            }
+        }
+
+        sb.append("  </g>\n</svg>\n");
+        return sb.toString();
+    }
+
+    private static String toPngDataUri(File logoFile) throws Exception {
+        BufferedImage logo = ImageIO.read(logoFile);
+        if (logo == null) {
+            throw new IllegalArgumentException("Logo-Datei konnte nicht gelesen werden.");
+        }
+
+        ByteArrayOutputStream baos = new ByteArrayOutputStream();
+        ImageIO.write(logo, "png", baos);
+        String b64 = Base64.getEncoder().encodeToString(baos.toByteArray());
+        return "data:image/png;base64," + b64;
+    }
+
+    private static String toHex(Color c) {
+        int r = (int) Math.round(c.getRed() * 255);
+        int g = (int) Math.round(c.getGreen() * 255);
+        int b = (int) Math.round(c.getBlue() * 255);
+        return String.format("#%02X%02X%02X", r, g, b);
+    }
+
+    private static String trimDouble(double d) {
+        String s = String.format("%.4f", d);
+        return s.replaceAll("0+$", "").replaceAll("\\.$", "");
     }
 
     private String buildContent() {
