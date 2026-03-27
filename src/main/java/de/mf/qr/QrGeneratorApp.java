@@ -41,9 +41,13 @@ import java.util.Map;
 
 public class QrGeneratorApp extends Application {
 
+    private static final String APP_NAME = "QR-Code Generator";
+    private static final String APP_FALLBACK_VERSION = "1.0.0";
     private static final String INVALID_STYLE_CLASS = "invalid-field";
     private static final String VALIDATION_SUCCESS_STYLE_CLASS = "validation-success";
     private static final String VALIDATION_ERROR_STYLE_CLASS = "validation-error";
+    private static final int SVG_BASE_SIZE = 360;
+    private static final int SVG_MODULE_SCALE = 4;
 
     private enum ContentType {
         TEXT("Text"),
@@ -97,16 +101,18 @@ public class QrGeneratorApp extends Application {
     private final ToggleGroup tgLocationMode = new ToggleGroup();
     private final HBox locationModeBox = new HBox(10, rbAddress, rbCoordinates);
 
+    private final Button btnAbout = new Button("Über");
     private final Button btnSave = new Button("QR-Code generieren & speichern");
     private final Label lblHelp = new Label();
     private final Label lblValidation = new Label();
+    private final Label lblVersion = new Label();
     private final PauseTransition livePreviewDelay = new PauseTransition(Duration.millis(250));
 
     private final ImageView preview = new ImageView();
 
     @Override
     public void start(Stage stage) {
-        stage.setTitle("QR-Code Generator");
+        stage.setTitle(APP_NAME);
 
         typeBox.getItems().addAll(ContentType.values());
         typeBox.setValue(ContentType.TEXT);
@@ -133,6 +139,7 @@ public class QrGeneratorApp extends Application {
 
         Button btnPickLogo = new Button("Logo auswählen");
         btnPickLogo.setOnAction(e -> pickLogo(stage));
+        btnAbout.setOnAction(e -> showAboutDialog());
         btnSave.setOnAction(e -> saveQr(stage));
 
         GridPane form = new GridPane();
@@ -181,7 +188,7 @@ public class QrGeneratorApp extends Application {
         form.add(new Label("Logo:"), 0, r);
         form.add(logoRow, 1, r++);
 
-        HBox actionRow = new HBox(10, btnSave);
+        HBox actionRow = new HBox(10, btnAbout, btnSave);
         actionRow.setAlignment(Pos.CENTER_LEFT);
 
         HBox typeRow = new HBox(10, new Label("Typ:"), typeBox);
@@ -189,6 +196,9 @@ public class QrGeneratorApp extends Application {
 
         lblHelp.getStyleClass().add("help-label");
         lblHelp.setWrapText(true);
+
+        lblVersion.setText("Version " + getAppVersion());
+        lblVersion.getStyleClass().add("help-label");
 
         lblValidation.getStyleClass().add("validation-label");
         lblValidation.getStyleClass().add(VALIDATION_ERROR_STYLE_CLASS);
@@ -198,7 +208,7 @@ public class QrGeneratorApp extends Application {
         preview.setFitHeight(280);
         preview.setPreserveRatio(true);
 
-        VBox root = new VBox(8, typeRow, lblHelp, lblValidation, form, actionRow, new Label("Vorschau:"), preview);
+        VBox root = new VBox(8, typeRow, lblVersion, lblHelp, lblValidation, form, actionRow, new Label("Vorschau:"), preview);
         root.setPadding(new Insets(10));
 
         typeBox.valueProperty().addListener((obs, oldV, newV) -> {
@@ -464,10 +474,11 @@ public class QrGeneratorApp extends Application {
             if (saveAsSvg) {
                 String svg = generateQrSvg(
                         content,
-                        360,
+                    SVG_BASE_SIZE,
                         cpQr.getValue(),
                         cbTransparentBg.isSelected() ? null : cpBg.getValue(),
-                        (cbLogo.isSelected() && selectedLogo != null) ? selectedLogo.getAbsolutePath() : null
+                    (cbLogo.isSelected() && selectedLogo != null) ? selectedLogo.getAbsolutePath() : null,
+                    SVG_MODULE_SCALE
                 );
                 Files.writeString(out.toPath(), svg, StandardCharsets.UTF_8);
             } else {
@@ -510,7 +521,14 @@ public class QrGeneratorApp extends Application {
         return new File(out.getParentFile(), out.getName() + ext);
     }
 
-    private static String generateQrSvg(String content, int size, Color qrColor, Color bgColor, String logoPath) throws Exception {
+        private static String generateQrSvg(
+            String content,
+            int size,
+            Color qrColor,
+            Color bgColor,
+            String logoPath,
+            int moduleScale
+        ) throws Exception {
         Map<EncodeHintType, Object> hints = new HashMap<>();
         hints.put(EncodeHintType.CHARACTER_SET, StandardCharsets.UTF_8.name());
         hints.put(EncodeHintType.ERROR_CORRECTION, ErrorCorrectionLevel.H);
@@ -519,13 +537,15 @@ public class QrGeneratorApp extends Application {
         BitMatrix matrix = new MultiFormatWriter().encode(content, BarcodeFormat.QR_CODE, size, size, hints);
         int w = matrix.getWidth();
         int h = matrix.getHeight();
+        int scaledW = w * moduleScale;
+        int scaledH = h * moduleScale;
 
         StringBuilder sb = new StringBuilder(1024 * 128);
         sb.append("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n");
         sb.append("<svg xmlns=\"http://www.w3.org/2000/svg\" viewBox=\"0 0 ")
-                .append(w)
+            .append(scaledW)
                 .append(' ')
-                .append(h)
+            .append(scaledH)
                 .append("\" shape-rendering=\"crispEdges\">\n");
 
         if (bgColor != null) {
@@ -548,10 +568,14 @@ public class QrGeneratorApp extends Application {
             for (int x = 0; x < w; x++) {
                 if (matrix.get(x, y)) {
                     sb.append("    <rect x=\"")
-                            .append(x)
+                            .append(x * moduleScale)
                             .append("\" y=\"")
-                            .append(y)
-                            .append("\" width=\"1\" height=\"1\"/>\n");
+                            .append(y * moduleScale)
+                            .append("\" width=\"")
+                            .append(moduleScale)
+                            .append("\" height=\"")
+                            .append(moduleScale)
+                            .append("\"/>\n");
                 }
             }
         }
@@ -564,27 +588,56 @@ public class QrGeneratorApp extends Application {
                 int lx = (w - logoSize) / 2;
                 int ly = (h - logoSize) / 2;
                 int padding = 4;
+                int cornerRadius = 8;
+
+                int sx = lx * moduleScale;
+                int sy = ly * moduleScale;
+                int sLogoSize = logoSize * moduleScale;
+                int sPadding = padding * moduleScale;
+                int sCornerRadius = cornerRadius * moduleScale;
+
+                sb.append("    <defs>\n")
+                    .append("      <clipPath id=\"logoClip\">\n")
+                    .append("        <rect x=\"")
+                    .append(sx)
+                    .append("\" y=\"")
+                    .append(sy)
+                    .append("\" width=\"")
+                    .append(sLogoSize)
+                    .append("\" height=\"")
+                    .append(sLogoSize)
+                    .append("\" rx=\"")
+                    .append(sCornerRadius)
+                    .append("\" ry=\"")
+                    .append(sCornerRadius)
+                    .append("\"/>\n")
+                    .append("      </clipPath>\n")
+                    .append("    </defs>\n");
 
                 sb.append("    <rect x=\"")
-                        .append(lx - padding)
+                    .append(sx - sPadding)
                         .append("\" y=\"")
-                        .append(ly - padding)
+                    .append(sy - sPadding)
                         .append("\" width=\"")
-                        .append(logoSize + padding * 2)
+                    .append(sLogoSize + sPadding * 2)
                         .append("\" height=\"")
-                        .append(logoSize + padding * 2)
-                        .append("\" rx=\"8\" ry=\"8\" fill=\"#FFFFFF\"/>")
+                    .append(sLogoSize + sPadding * 2)
+                        .append("\" rx=\"")
+                    .append(sCornerRadius + (2 * moduleScale))
+                        .append("\" ry=\"")
+                    .append(sCornerRadius + (2 * moduleScale))
+                        .append("\" fill=\"#FFFFFF\"/>")
                         .append("\n");
 
                 sb.append("    <image x=\"")
-                        .append(lx)
+                    .append(sx)
                         .append("\" y=\"")
-                        .append(ly)
+                    .append(sy)
                         .append("\" width=\"")
-                        .append(logoSize)
+                    .append(sLogoSize)
                         .append("\" height=\"")
-                        .append(logoSize)
-                        .append("\" preserveAspectRatio=\"xMidYMid meet\" href=\"")
+                    .append(sLogoSize)
+                        .append("\" clip-path=\"url(#logoClip)\" preserveAspectRatio=\"xMidYMid meet\" href=\"")
                         .append(dataUri)
                         .append("\"/>")
                         .append("\n");
@@ -617,6 +670,23 @@ public class QrGeneratorApp extends Application {
     private static String trimDouble(double d) {
         String s = String.format("%.4f", d);
         return s.replaceAll("0+$", "").replaceAll("\\.$", "");
+    }
+
+    private String getAppVersion() {
+        String implVersion = QrGeneratorApp.class.getPackage().getImplementationVersion();
+        return (implVersion == null || implVersion.isBlank()) ? APP_FALLBACK_VERSION : implVersion;
+    }
+
+    private void showAboutDialog() {
+        Alert a = new Alert(Alert.AlertType.INFORMATION);
+        a.setTitle("Über");
+        a.setHeaderText(APP_NAME + " " + getAppVersion());
+        a.setContentText("Erstellt von MF\n\n"
+                + "Funktionen:\n"
+                + "• QR-Code für Text, YouTube, Webseite, WLAN und Standort\n"
+                + "• Live-Vorschau\n"
+                + "• PNG- und SVG-Export");
+        a.showAndWait();
     }
 
     private String buildContent() {
