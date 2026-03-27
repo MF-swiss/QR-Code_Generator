@@ -206,8 +206,7 @@ public class QrGeneratorApp extends Application {
         lblHelp.getStyleClass().add("help-label");
         lblHelp.setWrapText(true);
 
-        lblVersion.setText("Version " + getAppVersion());
-        lblVersion.getStyleClass().add("help-label");
+        // lblVersion entfernt
 
         lblValidation.getStyleClass().add("validation-label");
         lblValidation.getStyleClass().add(VALIDATION_ERROR_STYLE_CLASS);
@@ -217,7 +216,7 @@ public class QrGeneratorApp extends Application {
         preview.setFitHeight(280);
         preview.setPreserveRatio(true);
 
-        VBox root = new VBox(8, typeRow, lblVersion, lblHelp, lblValidation, form, actionRow, new Label("Vorschau:"), preview);
+        VBox root = new VBox(8, typeRow, lblHelp, lblValidation, form, actionRow, new Label("Vorschau:"), preview);
         root.setPadding(new Insets(10));
 
 
@@ -240,13 +239,11 @@ public class QrGeneratorApp extends Application {
         menuBar.getMenus().addAll(menuDatei, menuAnsicht, menuAbout);
 
         // Rechts: App-Info und großer Darkmode-Button
-        Label infoLabel = new Label(APP_NAME + " " + getAppVersion());
-        infoLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #64748B; -fx-padding: 0 10 0 0;");
         Button darkModeBtn = new Button("\u263E"); // ☾
         darkModeBtn.setFocusTraversable(false);
         darkModeBtn.setStyle("-fx-background-radius: 100; -fx-font-size: 22px; -fx-padding: 2 16 2 16; -fx-background-color: transparent; -fx-text-fill: #64748B;");
 
-        HBox rightBox = new HBox(16, infoLabel, darkModeBtn);
+        HBox rightBox = new HBox(16, darkModeBtn);
         rightBox.setAlignment(Pos.CENTER_RIGHT);
         rightBox.setStyle("-fx-padding: 0 18 0 0;");
 
@@ -305,8 +302,8 @@ public class QrGeneratorApp extends Application {
                 // Checkboxen und ComboBoxen explizit hell
                 cbTransparentBg.setStyle("-fx-text-fill: #E0E6F0;");
                 cbLogo.setStyle("-fx-text-fill: #E0E6F0;");
-                typeBox.setStyle("-fx-background-color: #23272F; -fx-text-fill: #E0E6F0;");
-                cbAuth.setStyle("-fx-background-color: #23272F; -fx-text-fill: #E0E6F0;");
+                typeBox.setStyle("-fx-background-color: #23272F; -fx-text-fill: #E0E6F0; -fx-prompt-text-fill: #E0E6F0;");
+                cbAuth.setStyle("-fx-background-color: #23272F; -fx-text-fill: #E0E6F0; -fx-prompt-text-fill: #E0E6F0;");
             } else {
                 scene.getStylesheets().remove(getClass().getResource("/dark-mode.css").toExternalForm());
                 darkModeBtn.setText("\u263E"); // ☾
@@ -331,26 +328,76 @@ public class QrGeneratorApp extends Application {
             }
         };
 
-        darkModeBtn.setOnAction(e -> {
-            if (!root.getStyleClass().contains("dark-mode")) {
-                root.getStyleClass().add("dark-mode");
+        // Workaround: ComboBox-Textfeld im Darkmode explizit hell setzen
+        Runnable fixComboBoxTextColor = () -> {
+            if (root.getStyleClass().contains("dark-mode")) {
+                setComboBoxTextColor(typeBox, "#E0E6F0");
+                setComboBoxTextColor(cbAuth, "#E0E6F0");
             } else {
-                root.getStyleClass().remove("dark-mode");
+                setComboBoxTextColor(typeBox, null);
+                setComboBoxTextColor(cbAuth, null);
             }
-            setDarkMode.run();
-        });
-        darkModeMenuToggle.selectedProperty().addListener((obs, wasDark, isDark) -> {
-            if (isDark && !root.getStyleClass().contains("dark-mode")) {
+        };
+        // Gemeinsame Umschaltfunktion für Darkmode (Button & Menü synchronisieren)
+        Runnable toggleDarkMode = () -> {
+            boolean isDark = root.getStyleClass().contains("dark-mode");
+            if (isDark) {
+                root.getStyleClass().remove("dark-mode");
+                darkModeMenuToggle.setSelected(false);
+            } else {
                 root.getStyleClass().add("dark-mode");
-            } else if (!isDark && root.getStyleClass().contains("dark-mode")) {
-                root.getStyleClass().remove("dark-mode");
+                darkModeMenuToggle.setSelected(true);
             }
             setDarkMode.run();
-        });
+            fixComboBoxTextColor.run();
+        };
+        darkModeBtn.setOnAction(e -> toggleDarkMode.run());
+        darkModeMenuToggle.selectedProperty().addListener((obs, wasDark, isDark) -> toggleDarkMode.run());
 
         setDarkMode.run();
         stage.setScene(scene);
         stage.show();
+
+        // Direkt nach dem Anzeigen einmal fixen
+        fixComboBoxTextColor.run();
+    }
+
+    // Hilfsfunktion: Setzt die Textfarbe im inneren Textfeld einer ComboBox
+    private static void setComboBoxTextColor(ComboBox<?> comboBox, String color) {
+        comboBox.applyCss();
+        comboBox.layout();
+        // Für editierbare ComboBoxen (TextField)
+        for (Node n : comboBox.lookupAll(".text-field")) {
+            if (n instanceof TextField tf) {
+                if (color != null) {
+                    tf.setStyle("-fx-text-fill: " + color + ";");
+                } else {
+                    tf.setStyle("");
+                }
+            }
+        }
+        // Für nicht editierbare ComboBoxen (Label)
+        for (Node n : comboBox.lookupAll(".combo-box .label")) {
+            if (n instanceof Label lbl) {
+                if (color != null) {
+                    lbl.setStyle("-fx-text-fill: " + color + ";");
+                } else {
+                    lbl.setStyle("");
+                }
+            }
+        }
+        // Für nicht editierbare ComboBoxen (sichtbare Auswahl als .list-cell)
+        for (Node n : comboBox.lookupAll(".list-cell")) {
+            if (n instanceof Labeled cell) {
+                if (cell.getParent() != null && cell.getParent().getStyleClass().contains("combo-box")) {
+                    if (color != null) {
+                        cell.setStyle("-fx-text-fill: " + color + ";");
+                    } else {
+                        cell.setStyle("");
+                    }
+                }
+            }
+        }
     }
 
     private void updateFieldVisibility() {
