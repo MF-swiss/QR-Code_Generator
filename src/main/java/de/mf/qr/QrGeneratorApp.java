@@ -190,7 +190,7 @@ public class QrGeneratorApp extends Application {
         preview.setFitHeight(280);
         preview.setPreserveRatio(true);
 
-        VBox root = new VBox(8, form, actionRow, lblHelp, lblValidation, new Label("Vorschau:"), preview);
+        VBox root = new VBox(8, lblValidation, lblHelp, form, actionRow, new Label("Vorschau:"), preview);
         root.setPadding(new Insets(10));
 
         typeBox.valueProperty().addListener((obs, oldV, newV) -> {
