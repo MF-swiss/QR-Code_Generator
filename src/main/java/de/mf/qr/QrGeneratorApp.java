@@ -43,9 +43,9 @@ public class QrGeneratorApp extends Application {
     private static final String VALIDATION_ERROR_STYLE_CLASS = "validation-error";
 
     private enum ContentType {
+        TEXT("Text"),
         YOUTUBE("YouTube"),
         WEBSEITE("Webseite"),
-        TEXT("Text"),
         WLAN_LOGIN("WLAN"),
         STANDORT("Standort");
 
@@ -105,7 +105,7 @@ public class QrGeneratorApp extends Application {
         stage.setTitle("QR-Code Generator");
 
         typeBox.getItems().addAll(ContentType.values());
-        typeBox.setValue(ContentType.YOUTUBE);
+        typeBox.setValue(ContentType.TEXT);
 
         tfUrl.setPromptText("https://www.youtube.com/watch?v=...");
         taText.setPromptText("Dein Text...");
@@ -132,12 +132,9 @@ public class QrGeneratorApp extends Application {
         GridPane form = new GridPane();
         form.setHgap(10);
         form.setVgap(8);
-        form.setPadding(new Insets(12));
+        form.setPadding(new Insets(0, 12, 12, 12));
 
         int r = 0;
-        form.add(new Label("Typ:"), 0, r);
-        form.add(typeBox, 1, r++);
-
         form.add(lblUrl, 0, r);
         form.add(tfUrl, 1, r++);
 
@@ -179,6 +176,9 @@ public class QrGeneratorApp extends Application {
         HBox actionRow = new HBox(10, btnSave);
         actionRow.setAlignment(Pos.CENTER_LEFT);
 
+        HBox typeRow = new HBox(10, new Label("Typ:"), typeBox);
+        typeRow.setAlignment(Pos.CENTER_LEFT);
+
         lblHelp.getStyleClass().add("help-label");
         lblHelp.setWrapText(true);
 
@@ -190,7 +190,7 @@ public class QrGeneratorApp extends Application {
         preview.setFitHeight(280);
         preview.setPreserveRatio(true);
 
-        VBox root = new VBox(8, lblValidation, lblHelp, form, actionRow, new Label("Vorschau:"), preview);
+        VBox root = new VBox(8, typeRow, lblHelp, lblValidation, form, actionRow, new Label("Vorschau:"), preview);
         root.setPadding(new Insets(10));
 
         typeBox.valueProperty().addListener((obs, oldV, newV) -> {
