@@ -34,13 +34,12 @@ import java.util.Map;
 public class QrGeneratorApp extends Application {
 
     private enum ContentType {
-        YOUTUBE, WEBSEITE, TEXT, WLAN_LOGIN, STANDORT, SONG
+        YOUTUBE, WEBSEITE, TEXT, WLAN_LOGIN, STANDORT
     }
 
     private final ComboBox<ContentType> typeBox = new ComboBox<>();
     private final TextField tfUrl = new TextField();
     private final TextArea taText = new TextArea();
-    private final TextField tfSong = new TextField();
     private final TextField tfLat = new TextField();
     private final TextField tfLon = new TextField();
     private final TextField tfSsid = new TextField();
@@ -54,11 +53,19 @@ public class QrGeneratorApp extends Application {
     private final Label lblLogoPath = new Label("Kein Logo ausgewählt");
     private File selectedLogo;
 
+    private final Label lblUrl = new Label("URL:");
+    private final Label lblText = new Label("Text:");
+    private final Label lblLat = new Label("Latitude:");
+    private final Label lblLon = new Label("Longitude:");
+    private final Label lblSsid = new Label("SSID:");
+    private final Label lblPass = new Label("Passwort:");
+    private final Label lblAuth = new Label("Auth:");
+
     private final ImageView preview = new ImageView();
 
     @Override
     public void start(Stage stage) {
-        stage.setTitle("QR-Code Generator (YouTube Favorit)");
+        stage.setTitle("QR-Code Generator");
 
         typeBox.getItems().addAll(ContentType.values());
         typeBox.setValue(ContentType.YOUTUBE);
@@ -66,7 +73,6 @@ public class QrGeneratorApp extends Application {
         tfUrl.setPromptText("https://www.youtube.com/watch?v=...");
         taText.setPromptText("Dein Text...");
         taText.setPrefRowCount(3);
-        tfSong.setPromptText("https://www.youtube.com/watch?v=... (oder anderer Song-Link)");
         tfLat.setPromptText("z. B. 47.3769");
         tfLon.setPromptText("z. B. 8.5417");
         tfSsid.setPromptText("WLAN-Name (SSID)");
@@ -92,28 +98,25 @@ public class QrGeneratorApp extends Application {
         form.add(new Label("Typ:"), 0, r);
         form.add(typeBox, 1, r++);
 
-        form.add(new Label("URL / YouTube:"), 0, r);
+        form.add(lblUrl, 0, r);
         form.add(tfUrl, 1, r++);
 
-        form.add(new Label("Text:"), 0, r);
+        form.add(lblText, 0, r);
         form.add(taText, 1, r++);
 
-        form.add(new Label("Song-Link:"), 0, r);
-        form.add(tfSong, 1, r++);
-
-        form.add(new Label("Latitude:"), 0, r);
+        form.add(lblLat, 0, r);
         form.add(tfLat, 1, r++);
 
-        form.add(new Label("Longitude:"), 0, r);
+        form.add(lblLon, 0, r);
         form.add(tfLon, 1, r++);
 
-        form.add(new Label("SSID:"), 0, r);
+        form.add(lblSsid, 0, r);
         form.add(tfSsid, 1, r++);
 
-        form.add(new Label("Passwort:"), 0, r);
+        form.add(lblPass, 0, r);
         form.add(pfWifi, 1, r++);
 
-        form.add(new Label("Auth:"), 0, r);
+        form.add(lblAuth, 0, r);
         form.add(cbAuth, 1, r++);
 
         form.add(new Label("QR-Farbe:"), 0, r);
@@ -149,20 +152,31 @@ public class QrGeneratorApp extends Application {
     private void updateFieldVisibility() {
         ContentType t = typeBox.getValue();
 
-        tfUrl.setDisable(!(t == ContentType.YOUTUBE || t == ContentType.WEBSEITE));
-        taText.setDisable(t != ContentType.TEXT);
-        tfSong.setDisable(t != ContentType.SONG);
-        tfLat.setDisable(t != ContentType.STANDORT);
-        tfLon.setDisable(t != ContentType.STANDORT);
-        tfSsid.setDisable(t != ContentType.WLAN_LOGIN);
-        pfWifi.setDisable(t != ContentType.WLAN_LOGIN);
-        cbAuth.setDisable(t != ContentType.WLAN_LOGIN);
+        boolean showUrl = t == ContentType.YOUTUBE || t == ContentType.WEBSEITE;
+        boolean showText = t == ContentType.TEXT;
+        boolean showStandort = t == ContentType.STANDORT;
+        boolean showWlan = t == ContentType.WLAN_LOGIN;
+
+        setRowVisible(lblUrl, tfUrl, showUrl);
+        setRowVisible(lblText, taText, showText);
+        setRowVisible(lblLat, tfLat, showStandort);
+        setRowVisible(lblLon, tfLon, showStandort);
+        setRowVisible(lblSsid, tfSsid, showWlan);
+        setRowVisible(lblPass, pfWifi, showWlan);
+        setRowVisible(lblAuth, cbAuth, showWlan);
 
         if (t == ContentType.YOUTUBE) {
             tfUrl.setPromptText("https://www.youtube.com/watch?v=...");
         } else if (t == ContentType.WEBSEITE) {
             tfUrl.setPromptText("https://deine-webseite.de");
         }
+    }
+
+    private static void setRowVisible(Control label, Control input, boolean visible) {
+        label.setVisible(visible);
+        label.setManaged(visible);
+        input.setVisible(visible);
+        input.setManaged(visible);
     }
 
     private void pickLogo(Stage stage) {
@@ -225,7 +239,6 @@ public class QrGeneratorApp extends Application {
             case YOUTUBE -> validateYouTubeUrl(requireNotBlank(tfUrl.getText(), "Bitte YouTube-Link eingeben."));
             case WEBSEITE -> requireNotBlank(tfUrl.getText(), "Bitte URL eingeben.");
             case TEXT -> requireNotBlank(taText.getText(), "Bitte Text eingeben.");
-            case SONG -> requireNotBlank(tfSong.getText(), "Bitte Song-Link eingeben.");
             case STANDORT -> {
                 double lat = parseDouble(tfLat.getText(), "Latitude ist ungültig.");
                 double lon = parseDouble(tfLon.getText(), "Longitude ist ungültig.");
