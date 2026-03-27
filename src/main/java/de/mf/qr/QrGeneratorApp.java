@@ -302,6 +302,11 @@ public class QrGeneratorApp extends Application {
                 tfSsid.setStyle("-fx-control-inner-background: #23272F; -fx-text-fill: #E0E6F0;");
                 pfWifi.setStyle("-fx-control-inner-background: #23272F; -fx-text-fill: #E0E6F0;");
                 menuBar.setStyle("-fx-background-color: #23272F; -fx-border-color: #23272F;");
+                // Checkboxen und ComboBoxen explizit hell
+                cbTransparentBg.setStyle("-fx-text-fill: #E0E6F0;");
+                cbLogo.setStyle("-fx-text-fill: #E0E6F0;");
+                typeBox.setStyle("-fx-background-color: #23272F; -fx-text-fill: #E0E6F0;");
+                cbAuth.setStyle("-fx-background-color: #23272F; -fx-text-fill: #E0E6F0;");
             } else {
                 scene.getStylesheets().remove(getClass().getResource("/dark-mode.css").toExternalForm());
                 darkModeBtn.setText("\u263E"); // ☾
@@ -319,6 +324,10 @@ public class QrGeneratorApp extends Application {
                 tfSsid.setStyle("");
                 pfWifi.setStyle("");
                 menuBar.setStyle("");
+                cbTransparentBg.setStyle("");
+                cbLogo.setStyle("");
+                typeBox.setStyle("");
+                cbAuth.setStyle("");
             }
         };
 
