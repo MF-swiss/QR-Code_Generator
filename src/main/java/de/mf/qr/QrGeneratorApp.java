@@ -281,19 +281,44 @@ public class QrGeneratorApp extends Application {
         Scene scene = new Scene(mainLayout, 760, 800);
         scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
 
-        // Darkmode synchronisieren (Menü und Button) und Scene-Hintergrund
+        // ECHTER DARKMODE: StyleClass und Styles explizit setzen
         Runnable setDarkMode = () -> {
             boolean isDark = root.getStyleClass().contains("dark-mode");
             if (isDark) {
-                scene.getStylesheets().add(getClass().getResource("/dark-mode.css").toExternalForm());
+                if (!scene.getStylesheets().contains(getClass().getResource("/dark-mode.css").toExternalForm()))
+                    scene.getStylesheets().add(getClass().getResource("/dark-mode.css").toExternalForm());
                 darkModeBtn.setText("\u2600"); // ☀
                 darkModeMenuToggle.setSelected(true);
                 scene.setFill(javafx.scene.paint.Color.web("#23272F"));
+                root.getStyleClass().add("dark-mode");
+                mainLayout.getStyleClass().add("dark-mode");
+                menuBar.getStyleClass().add("dark-mode");
+                form.getStyleClass().add("dark-mode");
+                taText.setStyle("-fx-control-inner-background: #23272F; -fx-text-fill: #E0E6F0;");
+                tfUrl.setStyle("-fx-control-inner-background: #23272F; -fx-text-fill: #E0E6F0;");
+                tfAddress.setStyle("-fx-control-inner-background: #23272F; -fx-text-fill: #E0E6F0;");
+                tfLat.setStyle("-fx-control-inner-background: #23272F; -fx-text-fill: #E0E6F0;");
+                tfLon.setStyle("-fx-control-inner-background: #23272F; -fx-text-fill: #E0E6F0;");
+                tfSsid.setStyle("-fx-control-inner-background: #23272F; -fx-text-fill: #E0E6F0;");
+                pfWifi.setStyle("-fx-control-inner-background: #23272F; -fx-text-fill: #E0E6F0;");
+                menuBar.setStyle("-fx-background-color: #23272F; -fx-border-color: #23272F;");
             } else {
                 scene.getStylesheets().remove(getClass().getResource("/dark-mode.css").toExternalForm());
                 darkModeBtn.setText("\u263E"); // ☾
                 darkModeMenuToggle.setSelected(false);
                 scene.setFill(javafx.scene.paint.Color.web("#F8FAFC"));
+                root.getStyleClass().remove("dark-mode");
+                mainLayout.getStyleClass().remove("dark-mode");
+                menuBar.getStyleClass().remove("dark-mode");
+                form.getStyleClass().remove("dark-mode");
+                taText.setStyle("");
+                tfUrl.setStyle("");
+                tfAddress.setStyle("");
+                tfLat.setStyle("");
+                tfLon.setStyle("");
+                tfSsid.setStyle("");
+                pfWifi.setStyle("");
+                menuBar.setStyle("");
             }
         };
 
