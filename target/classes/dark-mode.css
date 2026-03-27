@@ -1,0 +1,40 @@
+.root.dark-mode {
+    -fx-background-color: linear-gradient(to bottom right, #23272F, #1A1D23);
+}
+
+.dark-mode .label,
+.dark-mode .help-label,
+.dark-mode .validation-label {
+    -fx-text-fill: #E0E6F0;
+}
+
+.dark-mode .button {
+    -fx-background-color: #3B82F6;
+    -fx-text-fill: #F8FAFC;
+}
+
+.dark-mode .button:hover {
+    -fx-background-color: #2563EB;
+}
+
+.dark-mode .combo-box,
+.dark-mode .text-field,
+.dark-mode .text-area,
+.dark-mode .password-field,
+.dark-mode .color-picker {
+    -fx-background-color: #23272F;
+    -fx-border-color: #475569;
+    -fx-text-fill: #E0E6F0;
+}
+
+.dark-mode .text-area .content {
+    -fx-background-color: #23272F;
+}
+
+.dark-mode .validation-error {
+    -fx-text-fill: #F87171;
+}
+
+.dark-mode .validation-success {
+    -fx-text-fill: #4ADE80;
+}

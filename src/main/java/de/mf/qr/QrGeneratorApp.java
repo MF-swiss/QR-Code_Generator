@@ -101,7 +101,7 @@ public class QrGeneratorApp extends Application {
     private final ToggleGroup tgLocationMode = new ToggleGroup();
     private final HBox locationModeBox = new HBox(10, rbAddress, rbCoordinates);
 
-    private final Button btnAbout = new Button("Über");
+    // Über-Button entfernt
     private final Button btnSave = new Button("QR-Code generieren & speichern");
     private final Label lblHelp = new Label();
     private final Label lblValidation = new Label();
@@ -113,6 +113,14 @@ public class QrGeneratorApp extends Application {
     @Override
     public void start(Stage stage) {
         stage.setTitle(APP_NAME);
+
+        // Drag & Drop für Textfelder/TextArea
+        installTextDragAndDrop(tfUrl);
+        installTextDragAndDrop(taText);
+        installTextDragAndDrop(tfAddress);
+        installTextDragAndDrop(tfLat);
+        installTextDragAndDrop(tfLon);
+        installTextDragAndDrop(tfSsid);
 
         typeBox.getItems().addAll(ContentType.values());
         typeBox.setValue(ContentType.TEXT);
@@ -137,9 +145,9 @@ public class QrGeneratorApp extends Application {
 
         livePreviewDelay.setOnFinished(e -> generatePreview());
 
+
         Button btnPickLogo = new Button("Logo auswählen");
         btnPickLogo.setOnAction(e -> pickLogo(stage));
-        btnAbout.setOnAction(e -> showAboutDialog());
         btnSave.setOnAction(e -> saveQr(stage));
 
         GridPane form = new GridPane();
@@ -188,7 +196,7 @@ public class QrGeneratorApp extends Application {
         form.add(new Label("Logo:"), 0, r);
         form.add(logoRow, 1, r++);
 
-        HBox actionRow = new HBox(10, btnAbout, btnSave);
+        HBox actionRow = new HBox(10, btnSave);
         actionRow.setAlignment(Pos.CENTER_LEFT);
 
         HBox typeRow = new HBox(10, new Label("Typ:"), typeBox);
@@ -211,6 +219,15 @@ public class QrGeneratorApp extends Application {
         VBox root = new VBox(8, typeRow, lblVersion, lblHelp, lblValidation, form, actionRow, new Label("Vorschau:"), preview);
         root.setPadding(new Insets(10));
 
+        // Menüleiste mit Dark Mode Umschalter
+        MenuBar menuBar = new MenuBar();
+        Menu menuAnsicht = new Menu("Ansicht");
+        CheckMenuItem darkModeToggle = new CheckMenuItem("Dark Mode");
+        menuAnsicht.getItems().add(darkModeToggle);
+        menuBar.getMenus().add(menuAnsicht);
+
+        VBox mainLayout = new VBox(menuBar, root);
+
         typeBox.valueProperty().addListener((obs, oldV, newV) -> {
             updateFieldVisibility();
             updateValidationState();
@@ -227,8 +244,17 @@ public class QrGeneratorApp extends Application {
         updateValidationState();
         scheduleLivePreview();
 
-        Scene scene = new Scene(root, 760, 800);
+        Scene scene = new Scene(mainLayout, 760, 800);
         scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
+        darkModeToggle.selectedProperty().addListener((obs, wasDark, isDark) -> {
+            if (isDark) {
+                scene.getStylesheets().add(getClass().getResource("/dark-mode.css").toExternalForm());
+                root.getStyleClass().add("dark-mode");
+            } else {
+                scene.getStylesheets().remove(getClass().getResource("/dark-mode.css").toExternalForm());
+                root.getStyleClass().remove("dark-mode");
+            }
+        });
         stage.setScene(scene);
         stage.show();
     }
@@ -278,6 +304,28 @@ public class QrGeneratorApp extends Application {
         label.setManaged(visible);
         input.setVisible(visible);
         input.setManaged(visible);
+    }
+
+    /**
+     * Aktiviert Drag & Drop für Textfelder/TextArea (Text wird eingefügt).
+     */
+    private static void installTextDragAndDrop(TextInputControl control) {
+        control.setOnDragOver(event -> {
+            if (event.getGestureSource() != control && event.getDragboard().hasString()) {
+                event.acceptTransferModes(javafx.scene.input.TransferMode.COPY_OR_MOVE);
+            }
+            event.consume();
+        });
+        control.setOnDragDropped(event -> {
+            var db = event.getDragboard();
+            boolean success = false;
+            if (db.hasString()) {
+                control.insertText(control.getCaretPosition(), db.getString());
+                success = true;
+            }
+            event.setDropCompleted(success);
+            event.consume();
+        });
     }
 
     private void installRealtimeValidation() {
