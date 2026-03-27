@@ -30,3 +30,26 @@
 .text-area .content {
     -fx-background-radius: 10;
 }
+
+.validation-label {
+    -fx-font-weight: 600;
+}
+
+.validation-error {
+    -fx-text-fill: #B42318;
+}
+
+.validation-success {
+    -fx-text-fill: #027A48;
+}
+
+.help-label {
+    -fx-text-fill: #334155;
+    -fx-font-size: 11px;
+}
+
+.invalid-field {
+    -fx-border-color: #D92D20;
+    -fx-border-width: 1.5;
+    -fx-background-insets: 0;
+}
