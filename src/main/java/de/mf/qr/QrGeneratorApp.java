@@ -17,6 +17,7 @@ import javafx.scene.image.WritableImage;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.layout.Region;
 import javafx.scene.paint.Color;
 import javafx.stage.FileChooser;
 import javafx.stage.Stage;
@@ -219,14 +220,47 @@ public class QrGeneratorApp extends Application {
         VBox root = new VBox(8, typeRow, lblVersion, lblHelp, lblValidation, form, actionRow, new Label("Vorschau:"), preview);
         root.setPadding(new Insets(10));
 
-        // Menüleiste mit Dark Mode Umschalter
-        MenuBar menuBar = new MenuBar();
-        Menu menuAnsicht = new Menu("Ansicht");
-        CheckMenuItem darkModeToggle = new CheckMenuItem("Dark Mode");
-        menuAnsicht.getItems().add(darkModeToggle);
-        menuBar.getMenus().add(menuAnsicht);
 
-        VBox mainLayout = new VBox(menuBar, root);
+        // Menüleiste mit Datei, About, Ansicht
+        MenuBar menuBar = new MenuBar();
+        Menu menuDatei = new Menu("Datei");
+        MenuItem speichernUnter = new MenuItem("Speichern unter");
+        speichernUnter.setOnAction(e -> saveQr(stage));
+        menuDatei.getItems().add(speichernUnter);
+
+        Menu menuAbout = new Menu("About");
+        MenuItem aboutItem = new MenuItem("Über QR Generator");
+        aboutItem.setOnAction(e -> showAboutDialog());
+        menuAbout.getItems().add(aboutItem);
+
+        Menu menuAnsicht = new Menu("Ansicht");
+        CheckMenuItem darkModeMenuToggle = new CheckMenuItem("Darkmode");
+        menuAnsicht.getItems().add(darkModeMenuToggle);
+
+        menuBar.getMenus().addAll(menuDatei, menuAnsicht, menuAbout);
+
+        // Rechts: App-Info und großer Darkmode-Button
+        Label infoLabel = new Label(APP_NAME + " " + getAppVersion());
+        infoLabel.setStyle("-fx-font-size: 13px; -fx-text-fill: #64748B; -fx-padding: 0 10 0 0;");
+        Button darkModeBtn = new Button("\u263E"); // ☾
+        darkModeBtn.setFocusTraversable(false);
+        darkModeBtn.setStyle("-fx-background-radius: 100; -fx-font-size: 22px; -fx-padding: 2 16 2 16; -fx-background-color: transparent; -fx-text-fill: #64748B;");
+
+        HBox rightBox = new HBox(16, infoLabel, darkModeBtn);
+        rightBox.setAlignment(Pos.CENTER_RIGHT);
+        rightBox.setStyle("-fx-padding: 0 18 0 0;");
+
+        // Menüleiste links, Info & Darkmode-Button rechts
+        HBox menuBarRow = new HBox();
+        menuBarRow.getChildren().addAll(menuBar);
+        Region spacer = new Region();
+        HBox.setHgrow(spacer, javafx.scene.layout.Priority.ALWAYS);
+        menuBarRow.getChildren().addAll(spacer, rightBox);
+        menuBarRow.setAlignment(Pos.CENTER_LEFT);
+        menuBarRow.setSpacing(0);
+        menuBarRow.setStyle("-fx-background-color: transparent;");
+
+        VBox mainLayout = new VBox(menuBarRow, root);
 
         typeBox.valueProperty().addListener((obs, oldV, newV) -> {
             updateFieldVisibility();
@@ -246,15 +280,41 @@ public class QrGeneratorApp extends Application {
 
         Scene scene = new Scene(mainLayout, 760, 800);
         scene.getStylesheets().add(getClass().getResource("/style.css").toExternalForm());
-        darkModeToggle.selectedProperty().addListener((obs, wasDark, isDark) -> {
+
+        // Darkmode synchronisieren (Menü und Button) und Scene-Hintergrund
+        Runnable setDarkMode = () -> {
+            boolean isDark = root.getStyleClass().contains("dark-mode");
             if (isDark) {
                 scene.getStylesheets().add(getClass().getResource("/dark-mode.css").toExternalForm());
-                root.getStyleClass().add("dark-mode");
+                darkModeBtn.setText("\u2600"); // ☀
+                darkModeMenuToggle.setSelected(true);
+                scene.setFill(javafx.scene.paint.Color.web("#23272F"));
             } else {
                 scene.getStylesheets().remove(getClass().getResource("/dark-mode.css").toExternalForm());
+                darkModeBtn.setText("\u263E"); // ☾
+                darkModeMenuToggle.setSelected(false);
+                scene.setFill(javafx.scene.paint.Color.web("#F8FAFC"));
+            }
+        };
+
+        darkModeBtn.setOnAction(e -> {
+            if (!root.getStyleClass().contains("dark-mode")) {
+                root.getStyleClass().add("dark-mode");
+            } else {
                 root.getStyleClass().remove("dark-mode");
             }
+            setDarkMode.run();
         });
+        darkModeMenuToggle.selectedProperty().addListener((obs, wasDark, isDark) -> {
+            if (isDark && !root.getStyleClass().contains("dark-mode")) {
+                root.getStyleClass().add("dark-mode");
+            } else if (!isDark && root.getStyleClass().contains("dark-mode")) {
+                root.getStyleClass().remove("dark-mode");
+            }
+            setDarkMode.run();
+        });
+
+        setDarkMode.run();
         stage.setScene(scene);
         stage.show();
     }
@@ -725,15 +785,12 @@ public class QrGeneratorApp extends Application {
         return (implVersion == null || implVersion.isBlank()) ? APP_FALLBACK_VERSION : implVersion;
     }
 
+    // Info-Dialog für About-Menü
     private void showAboutDialog() {
         Alert a = new Alert(Alert.AlertType.INFORMATION);
-        a.setTitle("Über");
+        a.setTitle("Über QR Generator");
         a.setHeaderText(APP_NAME + " " + getAppVersion());
-        a.setContentText("Erstellt von MF\n\n"
-                + "Funktionen:\n"
-                + "• QR-Code für Text, YouTube, Webseite, WLAN und Standort\n"
-                + "• Live-Vorschau\n"
-                + "• PNG- und SVG-Export");
+        a.setContentText("Einfacher, datenschutzfreundlicher QR-Code Generator\n\nErstellt von MF\nLizenz: MIT\n\nGitHub: github.com/MF-swiss/QR-Code_Generator");
         a.showAndWait();
     }
 

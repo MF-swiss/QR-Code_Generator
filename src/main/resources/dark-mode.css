@@ -2,39 +2,66 @@
     -fx-background-color: linear-gradient(to bottom right, #23272F, #1A1D23);
 }
 
-.dark-mode .label,
-.dark-mode .help-label,
-.dark-mode .validation-label {
+/* Menüleiste und Menüs */
+.dark-mode .menu-bar {
+    -fx-background-color: #23272F;
+    -fx-border-color: #23272F;
+}
+.dark-mode .menu {
+    -fx-background-color: #23272F;
     -fx-text-fill: #E0E6F0;
 }
-
-.dark-mode .button {
-    -fx-background-color: #3B82F6;
+.dark-mode .menu-item {
+    -fx-background-color: #23272F;
+    -fx-text-fill: #E0E6F0;
+}
+.dark-mode .menu-item:focused, .dark-mode .menu-item:hover {
+    -fx-background-color: #334155;
     -fx-text-fill: #F8FAFC;
 }
 
-.dark-mode .button:hover {
-    -fx-background-color: #2563EB;
+/* Kontextmenüs */
+.dark-mode .context-menu {
+    -fx-background-color: #23272F;
+    -fx-text-fill: #E0E6F0;
 }
 
-.dark-mode .combo-box,
-.dark-mode .text-field,
-.dark-mode .text-area,
-.dark-mode .password-field,
+/* Vorschau-Hintergrund */
+.dark-mode .image-view {
+    -fx-background-color: #181B20;
+    -fx-border-color: #334155;
+    -fx-border-width: 1;
+}
+
+/* Scrollbars */
+.dark-mode .scroll-bar:vertical, .dark-mode .scroll-bar:horizontal {
+    -fx-background-color: #23272F;
+}
+.dark-mode .thumb {
+    -fx-background-color: #475569;
+}
+
+/* ColorPicker-Popup */
 .dark-mode .color-picker {
+    -fx-background-color: #23272F;
+    -fx-text-fill: #E0E6F0;
+}
+
+/* Textfelder, ComboBox, etc. (verstärkt) */
+.dark-mode .combo-box, .dark-mode .text-field, .dark-mode .text-area, .dark-mode .password-field {
     -fx-background-color: #23272F;
     -fx-border-color: #475569;
     -fx-text-fill: #E0E6F0;
 }
 
-.dark-mode .text-area .content {
-    -fx-background-color: #23272F;
+/* Labels, Buttons, etc. (verstärkt) */
+.dark-mode .label, .dark-mode .help-label, .dark-mode .validation-label {
+    -fx-text-fill: #E0E6F0;
 }
-
-.dark-mode .validation-error {
-    -fx-text-fill: #F87171;
+.dark-mode .button {
+    -fx-background-color: #3B82F6;
+    -fx-text-fill: #F8FAFC;
 }
-
-.dark-mode .validation-success {
-    -fx-text-fill: #4ADE80;
+.dark-mode .button:hover {
+    -fx-background-color: #2563EB;
 }
