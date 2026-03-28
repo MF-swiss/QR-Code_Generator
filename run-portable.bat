@@ -1,16 +1,5 @@
 @echo off
-setlocal enabledelayedexpansion
-
-set "APP_JAR="
-for %%F in ("target\*-all.jar") do (
-  set "APP_JAR=%%~fF"
-)
-
-if "%APP_JAR%"=="" (
-  echo Kein portable JAR gefunden. Bitte zuerst bauen (mvn clean package).
-  exit /b 1
-)
-
-echo Starte %APP_JAR%
-start "QR Code Generator" javaw -jar "%APP_JAR%"
-exit /b 0
+set JAVA_EXE=java
+set JAVAFX_SDK=javafx-sdk-27
+%JAVA_EXE% --module-path %JAVAFX_SDK%\lib --add-modules javafx.controls,javafx.fxml -jar target\qr-code-generator-1.0.0-all.jar
+pause
